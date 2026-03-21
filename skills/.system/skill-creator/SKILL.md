@@ -1,8 +1,8 @@
 ---
 name: skill-creator
-description: Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Codex's capabilities with specialized knowledge, workflows, or tool integrations.
+description: Guide for creating effective skills, improving existing skills, and evaluating skill quality. Use this skill when users want to create or update a skill, design or run realistic test cases, compare baseline and candidate outputs, iterate from feedback, or optimize trigger descriptions for better routing.
 metadata:
-  short-description: Create or update a skill
+  short-description: Create, evaluate, or improve a skill
 ---
 
 # Skill Creator
@@ -22,6 +22,15 @@ equipped with procedural knowledge that no model can fully possess.
 2. Tool integrations - Instructions for working with specific file formats or APIs
 3. Domain expertise - Company-specific knowledge, schemas, business logic
 4. Bundled resources - Scripts, references, and assets for complex and repetitive tasks
+
+## Communicating with the User
+
+Match terminology to user fluency and avoid unexplained jargon.
+
+1. Use plain language by default.
+2. Define technical terms briefly on first use when confidence is low.
+3. Ask fewer, higher-signal questions per turn.
+4. Confirm assumptions before moving to implementation when requirements are ambiguous.
 
 ## Core Principles
 
@@ -44,6 +53,14 @@ Match the level of specificity to the task's fragility and variability:
 **Low freedom (specific scripts, few parameters)**: Use when operations are fragile and error-prone, consistency is critical, or a specific sequence must be followed.
 
 Think of Codex as exploring a path: a narrow bridge with cliffs needs specific guardrails (low freedom), while an open field allows many routes (high freedom).
+
+### Principle of Lack of Surprise
+
+Keep skill behavior aligned with declared purpose and user intent.
+
+1. Do not create skills that facilitate unauthorized access, malware, stealth exfiltration, or deceptive behavior.
+2. Ensure instructions and bundled resources match the frontmatter description.
+3. If intent is ambiguous and risk-sensitive, pause and clarify constraints before drafting.
 
 ### Anatomy of a Skill
 
@@ -216,14 +233,27 @@ Codex reads REDLINING.md or OOXML.md only when the user needs those features.
 
 Skill creation involves these steps:
 
-1. Understand the skill with concrete examples
+1. Capture intent with concrete examples
 2. Plan reusable skill contents (scripts, references, assets)
 3. Initialize the skill (run init_skill.py)
 4. Edit the skill (implement resources and write SKILL.md)
 5. Validate the skill (run quick_validate.py)
-6. Iterate based on real usage
+6. Evaluate test cases with a baseline
+7. Improve the skill from evidence
+8. Optimize the trigger description (optional)
+9. Communicate iteration outcomes (optional)
 
 Follow these steps in order, skipping only if there is a clear reason why they are not applicable.
+
+### Choose the Working Stage
+
+Start by identifying where the user is in the lifecycle: intent discovery, draft writing, evaluation, improvement, or trigger tuning.
+
+1. Enter at the highest-value stage immediately.
+2. Backfill prerequisites only when a missing input blocks progress.
+3. Offer both paths when helpful:
+   - Quick iteration: minimal eval set for fast feedback.
+   - Full evaluation: broader coverage with baseline comparison and stronger evidence.
 
 ### Skill Naming
 
@@ -233,11 +263,13 @@ Follow these steps in order, skipping only if there is a clear reason why they a
 - Namespace by tool when it improves clarity or triggering (e.g., `gh-address-comments`, `linear-address-issue`).
 - Name the skill folder exactly after the skill name.
 
-### Step 1: Understanding the Skill with Concrete Examples
+### Step 1: Capture Intent with Concrete Examples
 
 Skip this step only when the skill's usage patterns are already clearly understood. It remains valuable even when working with an existing skill.
 
 To create an effective skill, clearly understand concrete examples of how the skill will be used. This understanding can come from either direct user examples or generated examples that are validated with user feedback.
+
+Before asking questions, extract what is already known from conversation history and files: tools used, sequence of actions, corrections, and expected output shape.
 
 For example, when building an image-editor skill, relevant questions include:
 
@@ -249,6 +281,8 @@ For example, when building an image-editor skill, relevant questions include:
 To avoid overwhelming users, avoid asking too many questions in a single message. Start with the most important questions and follow up as needed for better effectiveness.
 
 Conclude this step when there is a clear sense of the functionality the skill should support.
+
+Before moving to Step 2, confirm the intent with the user in one short summary: target outcomes, trigger contexts, output format, and key constraints.
 
 ### Step 2: Planning the Reusable Skill Contents
 
@@ -282,18 +316,21 @@ Skip this step only if the skill being developed already exists. In this case, c
 
 When creating a new skill from scratch, always run the `init_skill.py` script. The script conveniently generates a new template skill directory that automatically includes everything a skill requires, making the skill creation process much more efficient and reliable.
 
+Run these commands from repository root so `--path skills/public` resolves correctly.
+These commands require `pyyaml`; run with `uv`.
+
 Usage:
 
 ```bash
-scripts/init_skill.py <skill-name> --path <output-directory> [--resources scripts,references,assets] [--examples]
+uv run --with pyyaml python3 skills/.system/skill-creator/scripts/init_skill.py <skill-name> --path <output-directory> [--resources scripts,references,assets] [--examples]
 ```
 
 Examples:
 
 ```bash
-scripts/init_skill.py my-skill --path skills/public
-scripts/init_skill.py my-skill --path skills/public --resources scripts,references
-scripts/init_skill.py my-skill --path skills/public --resources scripts --examples
+uv run --with pyyaml python3 skills/.system/skill-creator/scripts/init_skill.py my-skill --path skills/public
+uv run --with pyyaml python3 skills/.system/skill-creator/scripts/init_skill.py my-skill --path skills/public --resources scripts,references
+uv run --with pyyaml python3 skills/.system/skill-creator/scripts/init_skill.py my-skill --path skills/public --resources scripts --examples
 ```
 
 The script:
@@ -309,7 +346,7 @@ After initialization, customize the SKILL.md and add resources as needed. If you
 Generate `display_name`, `short_description`, and `default_prompt` by reading the skill, then pass them as `--interface key=value` to `init_skill.py` or regenerate with:
 
 ```bash
-scripts/generate_openai_yaml.py <path/to/skill-folder> --interface key=value
+uv run --with pyyaml python3 skills/.system/skill-creator/scripts/generate_openai_yaml.py <path/to/skill-folder> --interface key=value
 ```
 
 Only include other optional interface fields when the user explicitly provides them. For full field descriptions and examples, see references/openai_yaml.md.
@@ -350,19 +387,163 @@ Write instructions for using the skill and its bundled resources.
 
 Once development of the skill is complete, validate the skill folder to catch basic issues early:
 
+Run this command from repository root.
+
 ```bash
-scripts/quick_validate.py <path/to/skill-folder>
+uv run --with pyyaml python3 skills/.system/skill-creator/scripts/quick_validate.py <path/to/skill-folder>
 ```
 
 The validation script checks YAML frontmatter format, required fields, and naming rules. If validation fails, fix the reported issues and run the command again.
 
-### Step 6: Iterate
+### Step 6: Evaluate Test Cases with a Baseline
 
-After testing the skill, users may request improvements. Often this happens right after using the skill, with fresh context of how the skill performed.
+After validating structure and frontmatter, evaluate real behavior with realistic prompts. Do not rely on validation checks alone.
 
-**Iteration workflow:**
+#### Choose Evaluation Mode
 
-1. Use the skill on real tasks
-2. Notice struggles or inefficiencies
-3. Identify how SKILL.md or bundled resources should be updated
-4. Implement changes and test again
+Choose evaluation mode based on task type.
+
+1. Objective tasks: use assertions and baseline comparisons.
+2. Subjective tasks: prioritize qualitative review and human feedback.
+3. If baseline or quantitative checks are skipped, record the reason and define what evidence counts as success.
+
+#### Build an Evaluation Set
+
+Create 2-5 realistic prompts that mirror actual user requests. For each prompt, define expected outcomes in observable terms.
+
+Recommended structure:
+
+```json
+{
+  "skill_name": "example-skill",
+  "evals": [
+    {
+      "id": "invoice-cleanup-basic",
+      "prompt": "User prompt text",
+      "expected_output": "Observable result and quality bar",
+      "files": []
+    }
+  ]
+}
+```
+
+Use descriptive eval IDs and keep the set diverse enough to cover edge cases, not just the easiest happy path.
+
+Keep one canonical eval manifest at `<skill-name>-workspace/evals.json` and reuse it for every iteration.
+Store prompts and expected outcomes only in that manifest.
+When intent stays the same, keep the same eval `id` across iterations.
+Create a new eval `id` only when scope or acceptance criteria change.
+
+#### Run Candidate and Baseline
+
+For each eval, run two executions:
+
+1. Candidate run using the current skill.
+2. Baseline run:
+   - New skill: run without the skill.
+   - Existing skill update: run against a snapshot of the previous skill version.
+
+When subagents are available, run candidate and baseline in parallel. Otherwise, run sequentially and keep inputs identical.
+
+Store outputs by iteration and eval:
+
+```
+<skill-name>-workspace/
+  iteration-1/
+    <eval-id>/
+      candidate/
+      baseline/
+```
+
+Store only run artifacts in iteration folders.
+Do not duplicate prompt text or expected outcomes inside `candidate/` or `baseline/`; reference eval `id` from the canonical manifest.
+
+#### Grade and Review
+
+While runs are executing, draft objective assertions for each eval where possible. Use qualitative review only for outputs that cannot be scored objectively.
+
+For each run:
+
+1. Record pass/fail results with short evidence.
+2. Compare candidate vs baseline quality.
+3. Record time/token signals if the environment exposes them.
+4. Share side-by-side outputs with the user and collect feedback.
+
+Tie every requested change to one or more eval IDs so later iterations remain traceable.
+
+Maintain one comparison log (for example, `<skill-name>-workspace/results.md`) keyed by eval `id` and iteration.
+Avoid duplicating the same evidence in multiple notes; link to artifact paths instead.
+
+### Step 7: Improve the Skill from Evidence
+
+Use evaluation results and user feedback to update SKILL.md and bundled resources.
+
+#### Improvement Heuristics
+
+1. Generalize from feedback. Avoid overfitting to a small fixed eval set.
+2. Keep the prompt lean. Remove instructions that do not change outcomes.
+3. Explain why constraints matter. Prefer rationale over rigid wording.
+4. Promote repeated helper logic into scripts/ when multiple evals repeat the same work.
+
+#### Improvement Loop
+
+1. Apply targeted edits based on failing assertions or clear user feedback.
+2. Re-run all evals into a new iteration directory.
+3. Compare deltas against the prior iteration and baseline.
+4. Repeat until one stop condition is met:
+   - User confirms the skill is good enough.
+   - Feedback is mostly empty and assertions are stable.
+   - Additional iterations produce no meaningful improvements.
+
+### Step 8: Optimize the Trigger Description (Optional)
+
+After behavior is stable, optimize frontmatter description quality.
+
+1. Draft a mixed trigger eval set (should-trigger and should-not-trigger queries).
+2. Include near-miss negatives, not only obviously unrelated queries.
+3. Revise description wording to improve trigger precision and recall.
+4. Keep all trigger guidance in frontmatter; do not move trigger logic into body sections.
+5. Reuse Step 6 eval IDs for trigger checks when possible; add trigger-specific IDs only for routing behavior not already covered.
+
+### Step 9: Communicate Iteration Outcomes (Optional)
+
+Report each iteration in a compact, consistent format:
+
+1. Eval IDs that changed pass/fail status.
+2. Candidate vs baseline deltas with one-line evidence.
+3. Open risks and explicit user decisions needed.
+
+Keep summaries brief and link to stored artifacts instead of duplicating content.
+
+## Bundled Evaluation Tooling
+
+Use bundled scripts when they reduce repeated manual work.
+
+Prerequisites:
+
+- Run all commands from the skill root: `skills/.system/skill-creator`.
+- If running from repository root, prefix module commands with `PYTHONPATH=skills/.system/skill-creator`. For non-module scripts, use full paths (for example, `python3 skills/.system/skill-creator/eval-viewer/generate_review.py ...`).
+- Use `uv` when a script requires third-party dependencies.
+- Set `ANTHROPIC_API_KEY` before running description optimization scripts.
+
+- `python3 -m scripts.run_eval --eval-set <eval-set.json> --skill-path <skill-path> > <eval-results.json>`
+  - Evaluate trigger behavior against should-trigger and should-not-trigger prompts; this command prints JSON to stdout, so redirect it when you need an `--eval-results` file.
+  - Add `--warn-timeouts` when you want per-query timeout diagnostics.
+- `python3 -m scripts.aggregate_benchmark <benchmark-dir> --skill-name <name>`
+  - Aggregate grading results into benchmark summaries from a directory containing `eval-*` subdirectories.
+- `python3 eval-viewer/generate_review.py <workspace-dir> --skill-name "<name>"`
+  - Generate a review UI for side-by-side output review (use the workspace root, or pass a single iteration directory to review only that iteration).
+- `uv run --with anthropic python3 -m scripts.improve_description --eval-results <eval-results.json> --skill-path <skill-path> --model <model-id>`
+  - Propose improved frontmatter descriptions from eval evidence.
+- `uv run --with anthropic python3 -m scripts.run_loop --eval-set <eval-set.json> --skill-path <skill-path> --model <model-id>`
+  - Run iterative trigger-eval and description-improvement cycles.
+  - For very small eval sets (for example, fewer than 6 prompts), consider `--holdout 0` to avoid unstable train/test splits.
+  - If the API returns a model-not-found error, retry with a currently available model ID (for example, `claude-sonnet-4-6`).
+- `uv run --with pyyaml python3 -m scripts.package_skill <path/to/skill-folder> [output-directory]`
+  - Build a distributable `.skill` archive after validation.
+
+When you use these tools, read supporting docs as needed:
+
+- `references/schemas.md` for eval, grading, and benchmark schemas.
+- `agents/grader.md`, `agents/analyzer.md`, and `agents/comparator.md` for grading and analysis workflows.
+- `assets/eval_review.html` as a template for manual trigger-eval set review.

@@ -3,14 +3,14 @@
 Skill Initializer - Creates a new skill from template
 
 Usage:
-    init_skill.py <skill-name> --path <path> [--resources scripts,references,assets] [--examples] [--interface key=value]
+    uv run --with pyyaml python3 scripts/init_skill.py <skill-name> --path <path> [--resources scripts,references,assets] [--examples] [--interface key=value]
 
 Examples:
-    init_skill.py my-new-skill --path skills/public
-    init_skill.py my-new-skill --path skills/public --resources scripts,references
-    init_skill.py my-api-helper --path skills/private --resources scripts --examples
-    init_skill.py custom-skill --path /custom/location
-    init_skill.py my-skill --path skills/public --interface short_description="Short UI label"
+    uv run --with pyyaml python3 scripts/init_skill.py my-new-skill --path skills/public
+    uv run --with pyyaml python3 scripts/init_skill.py my-new-skill --path skills/public --resources scripts,references
+    uv run --with pyyaml python3 scripts/init_skill.py my-api-helper --path skills/private --resources scripts --examples
+    uv run --with pyyaml python3 scripts/init_skill.py custom-skill --path /custom/location
+    uv run --with pyyaml python3 scripts/init_skill.py my-skill --path skills/public --interface short_description="Short UI label"
 """
 
 import argparse
@@ -18,14 +18,19 @@ import re
 import sys
 from pathlib import Path
 
-from generate_openai_yaml import write_openai_yaml
+try:
+    # Works when executed as a module: python3 -m scripts.init_skill
+    from .generate_openai_yaml import write_openai_yaml
+except ImportError:
+    # Works when executed as a script: python3 scripts/init_skill.py
+    from generate_openai_yaml import write_openai_yaml
 
 MAX_SKILL_NAME_LENGTH = 64
 ALLOWED_RESOURCES = {"scripts", "references", "assets"}
 
 SKILL_TEMPLATE = """---
 name: {skill_name}
-description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]
+description: "TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it."
 ---
 
 # {skill_title}

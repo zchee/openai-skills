@@ -1,4 +1,4 @@
 interface:
   display_name: "Skill Creator"
-  short_description: "Create or update a skill"
-  default_prompt: "Read my repository and create a skill to bootstrap new components for my project."
+  short_description: "Create, evaluate, or improve skills"
+  default_prompt: "Use $skill-creator to create or improve a skill with realistic test cases and iteration."
